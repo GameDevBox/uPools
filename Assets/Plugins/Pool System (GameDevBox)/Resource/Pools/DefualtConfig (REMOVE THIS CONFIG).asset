@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45d16f2081a48704c9f71295174ed94b, type: 3}
+  m_Name: DefualtConfig (REMOVE THIS CONFIG)
+  m_EditorClassIdentifier: Assembly-CSharp::PoolConfig
+  poolKey: Cube01
+  poolCategory: Cube
+  prefabs:
+  - {fileID: 3245792814083091517, guid: a07dfe21c67dae34f8d6411751b576b3, type: 3}
+  initialPoolSize: 10
+  maxPoolSize: 100
+  instantiationMode: 0
+  prefabWeights:
+  - 1
+  transformResetMode: 3
+  defaultPosition: {x: 1, y: 0, z: 5}
+  defaultRotation: {x: 0, y: 0, z: 0.70710677, w: 0.70710677}
+  defaultScale: {x: 0.2, y: 0.2, z: 0.2}
+  overflowBehavior: 1
+  prewarmOnStart: 1
+  logPoolActivity: 0
+  poolKeysPath: Assets/Plugins/Pool System (GameDevBox)/Scripts/Runtime/Others/PoolKeys.cs
