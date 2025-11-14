@@ -65,7 +65,7 @@ Furthermore, it provides support for asynchronous object pooling using UniTask a
 
 2. Add the Pool System Manager: The PoolSystemManager is the core engine that handles all pooling logic.
 
-3- 3. Create Pool Configurations: Each pool is defined by a PoolConfig. 
+3. Create Pool Configurations: Each pool is defined by a PoolConfig. 
 
 You can create them through:
 
