@@ -169,6 +169,16 @@ PoolSystemManager.Instance.GetActiveCount("Enemy");
 PoolSystemManager.Instance.GetInactiveCount("Enemy");
 ```
 
+Get total objects ever created
+```cs
+int totalCreated = PoolSystemManager.Instance.GetTotalCreated("Bullet");
+```
+
+Check if a pool exists
+```cs
+bool exists = PoolSystemManager.Instance.PoolExists("Bullet");
+```
+
 Clear a pool:
 
 ```cs
@@ -202,6 +212,48 @@ Set manually:
 ```cs
 PoolSystemManager.Instance.SetPoolTransformMode("Bullet", TransformResetMode.KeepCurrent);
 ```
+
+Set Custom Defaults
+```cs
+PoolSystemManager.Instance.SetPoolTransformDefaults(
+    "Enemy",
+    new Vector3(0, 2, 0),
+    Quaternion.identity,
+    Vector3.one * 2f
+);
+```
+Get Reset Mode
+```cs
+TransformResetMode mode =
+    PoolSystemManager.Instance.GetPoolTransformMode("Enemy");
+``` 
+
+
+## 🗂 Category & Hierarchy Helpers
+Get parent transform of all pools
+```cs
+Transform root = PoolSystemManager.Instance.GetCurrentPoolParent();
+``` 
+Get all category root transforms
+```cs
+var categories = PoolSystemManager.Instance.GetCategoryParents();
+``` 
+
+
+## 📚 Key & Pool Management
+Get all pool keys
+```cs
+IEnumerable<string> keys = PoolSystemManager.Instance.GetAllPoolKeys();
+``` 
+Get as string[]
+```cs
+string[] keysArray = PoolSystemManager.Instance.GetAllPoolKeysArray();
+``` 
+Get instantiation mode
+```cs
+InstantiationMode mode =
+    PoolSystemManager.Instance.GetPoolInstantiationMode("Bullet");
+``` 
 
 ## UniTask
 
