@@ -8,7 +8,7 @@ A lightweight and highly flexible object pooling system for Unity with category 
 
 Furthermore, it provides support for asynchronous object pooling using UniTask and object pooling with Addressables.
 
-##Features
+## Features
 
 - Heavily upgraded core pooling manager built on top of uPools
 
@@ -46,7 +46,7 @@ Furthermore, it provides support for asynchronous object pooling using UniTask a
 
    - Works on root and child objects
 
-= Full support for uPools base features
+- Full support for uPools base features
 
 - Generic ObjectPool<T>
 
@@ -56,31 +56,150 @@ Furthermore, it provides support for asynchronous object pooling using UniTask a
 
 - Addressables pooling
 
-🚀 Setup & Installation
-Download the package or drag the folders to project.
 
-## Callbacks
+## 🚀 Setup & Installation
 
-You can insert custom actions on Rent and Return by implementing `IPoolCallbackReceiver`.
+**Highly recommend watching the tutorial: [Tutorial](https://youtu.be/kooOjK0K0bk)**
+
+1. Download the package or drag the folders to the project.
+
+2. Add the Pool System Manager: The PoolSystemManager is the core engine that handles all pooling logic.
+
+3- 3. Create Pool Configurations: Each pool is defined by a PoolConfig. 
+
+You can create them through:
+
+- Right-click in Project Window → Create → uPools → PoolConfig
+
+
+## How to Use in Code
+
+🟢 Get (Spawn)
 
 ```cs
-public class CallbackExample : MonoBehaviour, IPoolCallbackReceiver
-{
-    public void OnRent()
-    {
-        Debug.Log("Rented");
-    }
+GameObject bullet = PoolSystemManager.Instance.Get("Bullet");
+```
 
-    public void OnReturn()
-    {
-        Debug.Log("Returned");
-    }
+With position/rotation:
+
+```cs
+PoolSystemManager.Instance.Get(
+   "Bullet",
+   position: new Vector3(0, 1, 0),
+   rotation: Quaternion.identity
+);
+```
+
+
+Get a component directly:
+
+```cs
+var enemy = PoolSystemManager.Instance.Get<Enemy>("Enemy");
+```
+
+🔴 Release (Despawn)
+
+Release a single object:
+
+```cs
+PoolSystemManager.Instance.Release(gameObject);
+```
+
+
+Release by key:
+
+```cs
+PoolSystemManager.Instance.Release("Bullet");
+
+
+Release multiple:
+
+```cs
+PoolSystemManager.Instance.Release("Bullet", 5);
+```
+
+Release all objects from a pool:
+
+```cs
+PoolSystemManager.Instance.ReleaseAll("Bullet");
+```
+
+Release all pools:
+
+```cs
+PoolSystemManager.Instance.ReleaseAll();
+```
+
+## 🔄 Callbacks
+
+You can insert custom actions on Rent and Return by implementing `IPoolCallbackReceiver`. To run logic when the object is:
+
+- Created
+
+- Rented (spawned)
+
+- Returned (despawned)
+
+- Destroyed from pool (destroy array)
+
+```cs
+public class ExamplePoolable: MonoBehaviour, IPoolCallbackReceiver
+{
+    public void OnInitialize() { }
+    public void OnRent() { }
+    public void OnReturn() { }
+    public void OnPoolDestroy() { }
 }
+```
+
+## 📊 Tools & Debugging
+
+**Log pool stats:**
+
+```cs
+PoolSystemManager.Instance.LogPoolStatistics();
+```
+
+Get active or inactive counts:
+
+```cs
+PoolSystemManager.Instance.GetActiveCount("Enemy");
+PoolSystemManager.Instance.GetInactiveCount("Enemy");
+```
+
+Clear a pool:
+
+```cs
+PoolSystemManager.Instance.ClearPool("Enemy");
+```
+
+Get all keys:
+
+```cs
+PoolSystemManager.Instance.GetAllPoolKeys();
 ```
 
 In the case of `GameObjectPool` or `SharedGameObjectPool`, this component will be retrieved from the object and its child objects, and the callbacks will be invoked accordingly. For other object pools like `ObjectPool<T>` or pools that inherit from `ObjectPoolBase<T>`, the callbacks are invoked for objects that implement `IPoolCallbackReceiver`.
 
 If you create your own object pool by implementing `IObjectPool<T`, you will need to handle the `IPoolCallbackReceiver` calls yourself. Implement the necessary logic to invoke these callbacks as needed.
+
+
+## 🔧 Transform Reset Modes
+
+Every spawned object supports 4 reset strategies:
+
+- UsePrefabDefaults – resets to prefab transform
+
+= UseCustomDefaults – uses values defined in the PoolConfig
+
+- UseProvidedValues – uses values passed into Get()
+
+- KeepCurrent – leaves transform untouched
+
+Set manually:
+```cs
+PoolSystemManager.Instance.SetPoolTransformMode("Bullet", TransformResetMode.KeepCurrent);
+```
 
 ## UniTask
 
@@ -105,8 +224,18 @@ pool.Return(instance2);
 pool.Dispose();
 ```
 
+Original Upools: https://github.com/AnnulusGames/uPools
+
 You can also use the asynchronous version `AsyncAddressableGameObjectPool` by introducing UniTask.
 
-## License
+🔥follow my YouTube @GameDevBox to find more Tutorials and Tips: [GameDevBox](https://www.youtube.com/@GameDevBox)
 
-[MIT License](LICENSE)
+🔥See the tutorial for how you can set it up: https://youtu.be/kooOjK0K0bk
+
+## Social Media: 
+• [X/Twitter](https://x.com/ArianKhatiban)
+• [Instagram](https://www.instagram.com/arian.khatiban):
+• [LinkedIn](https://www.linkedin.com/in/arian-khatiban-49b30017a/):
+• [Discord Server](https://discord.gg/8hpGqBgXmz):
+• [itch.io](https://cloudtears.itch.io/):
+• [Youtube Subscribe](https://www.youtube.com/channel/UCgXs2PTiL19Rv1qOn1SI7XQ?sub_confirmation=1):
