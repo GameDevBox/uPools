@@ -2,6 +2,8 @@
 A lightweight and flexible object pooling system for Unity.
 This project is a heavily-modified fork of uPools, featuring an entirely upgraded core pooling manager, advanced configuration options, and several new systems built on top of the original library.
 
+📺 Watch the full tutorial on YouTube: https://youtu.be/kooOjK0K0bk
+
 ## Overview
 
 A lightweight and highly flexible object pooling system for Unity with category support, weighted instantiation, callbacks, and advanced spawn behaviors.
