@@ -1,4 +1,4 @@
-# uPools
+# Pool System (Upools + Pool Manager)
 A lightweight and flexible object pooling system for Unity.
 This project is a heavily-modified fork of uPools, featuring an entirely upgraded core pooling manager, advanced configuration options, and several new systems built on top of the original library.
 
