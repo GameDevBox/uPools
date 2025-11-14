@@ -190,7 +190,7 @@ Every spawned object supports 4 reset strategies:
 
 - UsePrefabDefaults – resets to prefab transform
 
-= UseCustomDefaults – uses values defined in the PoolConfig
+- UseCustomDefaults – uses values defined in the PoolConfig
 
 - UseProvidedValues – uses values passed into Get()
 
@@ -223,6 +223,9 @@ pool.Return(instance2);
 
 pool.Dispose();
 ```
+
+## Summary
+A complete, optimized, and fully customizable Unity Object Pooling System with auto-categorizing, transform settings, overflow behavior, and callback support. This is the system I use across multiple projects — stable, flexible, and easy to extend.
 
 Original Upools: https://github.com/AnnulusGames/uPools
 
