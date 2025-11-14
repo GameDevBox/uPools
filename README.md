@@ -154,6 +154,10 @@ public class ExamplePoolable: MonoBehaviour, IPoolCallbackReceiver
 }
 ```
 
+In the case of `GameObjectPool` or `SharedGameObjectPool`, this component will be retrieved from the object and its child objects, and the callbacks will be invoked accordingly. For other object pools like `ObjectPool<T>` or pools that inherit from `ObjectPoolBase<T>`, the callbacks are invoked for objects that implement `IPoolCallbackReceiver`.
+
+If you create your own object pool by implementing `IObjectPool<T`, you will need to handle the `IPoolCallbackReceiver` calls yourself. Implement the necessary logic to invoke these callbacks as needed.
+
 ## 📊 Tools & Debugging
 
 **Log pool stats:**
@@ -190,11 +194,6 @@ Get all keys:
 ```cs
 PoolSystemManager.Instance.GetAllPoolKeys();
 ```
-
-In the case of `GameObjectPool` or `SharedGameObjectPool`, this component will be retrieved from the object and its child objects, and the callbacks will be invoked accordingly. For other object pools like `ObjectPool<T>` or pools that inherit from `ObjectPoolBase<T>`, the callbacks are invoked for objects that implement `IPoolCallbackReceiver`.
-
-If you create your own object pool by implementing `IObjectPool<T`, you will need to handle the `IPoolCallbackReceiver` calls yourself. Implement the necessary logic to invoke these callbacks as needed.
-
 
 ## 🔧 Transform Reset Modes
 
