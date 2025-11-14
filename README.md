@@ -1,175 +1,63 @@
 # uPools
- A lightweight and flexible object pooling system for Unity
-
-<img width="100%" src="https://github.com/AnnulusGames/uPools/blob/main/Assets/uPools/Documentation~/Header.png">
-
-[![license](https://img.shields.io/badge/LICENSE-MIT-green.svg)](LICENSE)
-
-[日本語版READMEはこちら](README_JA.md)
+A lightweight and flexible object pooling system for Unity.
+This project is a heavily-modified fork of uPools, featuring an entirely upgraded core pooling manager, advanced configuration options, and several new systems built on top of the original library.
 
 ## Overview
 
-uPools is a library that provides object pooling functionality for Unity. It includes various classes for object pooling, such as a generic `ObjectPool` and a specialized `GameObjectPool` for GameObjects. You can also create your custom object pools by inheriting from the `ObjectPoolBase` class. Additionally, it offers the convenience of object pooling using `SharedGameObjectPool`.
+A lightweight and highly flexible object pooling system for Unity with category support, weighted instantiation, callbacks, and advanced spawn behaviors.
 
 Furthermore, it provides support for asynchronous object pooling using UniTask and object pooling with Addressables.
 
-## Features
+##Features
 
-* Numerous classes for object pooling in Unity
-* Generic object pooling with `ObjectPool`
-* Pooling for GameObjects with `GameObjectPool`
-* `SharedGameObjectPool` that can replace `Instantiate` and `Destroy`
-* Callback handling with `IPoolCallbackReceiver`
-* Asynchronous object pooling with UniTask
-* Object pooling with Addressables using `AddressableGameObjectPool`
+- Heavily upgraded core pooling manager built on top of uPools
 
-## Setup
+- Scriptable Pool Configs for fully data-driven pooling setup
 
-### Requirements
+- Support for multiple prefabs per pool key
 
-* Unity 2019.4 or newer
+- Four instantiation modes: Sequential, Random, Weighted Random, First-Only
 
-### Installation
+- Prefab categories with automatic grouping and filtering
 
-1. Open the Package Manager from Window > Package Manager.
-2. Click the "+" button, then select "Add package from git URL."
-3. Enter the following URL:
+- Customizable transform reset system
 
-```
-https://github.com/AnnulusGames/uPools.git?path=/Assets/uPools
-```
+  - Prefab Defaults
 
-Alternatively, open the Packages/manifest.json file and add the following to the dependencies block:
+  - Custom Defaults
 
-```json
-{
-    "dependencies": {
-        "com.annulusgames.u-pools" : "https://github.com/AnnulusGames/uPools.git?path=/Assets/uPools"
-    }
-}
-```
+  - Provided Runtime Values
 
-## Quick Start
+  - Keep Current Transform
 
-You can implement object pooling by simply replacing `Instantiate()` with `SharedGameObjectPool.Rent()` and `Destroy()` with `SharedGameObjectPool.Return()`.
+- Advanced overflow handling
 
-```cs
-using UnityEngine;
-using uPools;
+  - Block
 
-public class Example : MonoBehaviour
-{
-    [SerializeField] GameObject prefab;
+  - Reuse Oldest
 
-    void Start()
-    {
-        // Pre-warm objects in advance (additional objects are created automatically)
-        SharedGameObjectPool.Prewarm(prefab, 10);
+  - Reuse Random
 
-        // Retrieve objects from the pool
-        var instance = SharedGameObjectPool.Rent(prefab);
+- Initial & Maximum pool size control with optional prewarm on start
 
-        // Return the object to the pool after use
-        SharedGameObjectPool.Return(instance);
-    }
-}
-```
+- Built-in logging tools and automatic validation for broken configs
 
-This is the simplest way to implement object pooling. If you need more fine-grained control, you can explore the following methods.
+- Callback system with IPoolCallbackReceiver (OnRent, OnReturn, OnInitialize, OnDestroy)
 
-## Pooling Regular Classes
+   - Works on root and child objects
 
-To pool regular classes, you can create an object pool using `ObjectPool<T>`.
+= Full support for uPools base features
 
-```cs
-class PooledObject { }
+- Generic ObjectPool<T>
 
-var pool = new ObjectPool<PooledObject>(
-    createFunc: () => new PooledObject(), // provide object creation using a Func<T>
-    onRent: instance => { }, // actions on Rent (optional)
-    onReturn: instance => { }, // actions on Return  (optional)
-    onDestroy: instance => { } // actions when the pool is destroyed (optional)
-)
+- SharedGameObjectPool as an Instantiate/Destroy replacement
 
-// Pre-warm the pool with objects
-pool.Prewarm(10);
+- UniTask async pooling
 
-// Use Rent() to retrieve an object, and Return() to return it to the pool
-var instance = pool.Rent();
-pool.Return(instance);
+- Addressables pooling
 
-// Get the number of objects in the pool
-var count = pool.Count;
-
-// Clear all objects in the pool
-pool.Clear();
-
-// Dispose of the pool with Dispose()
-pool.Dispose();
-```
-
-> **Warning**
-> Note that object pools are not thread-safe.
-
-## Pooling GameObjects
-
-For pooling GameObjects, a dedicated `GameObjectPool` is provided.
-
-```cs
-// GameObject prefab
-GameObject original;
-
-var pool = new GameObjectPool(original);
-
-// Use Rent() to retrieve an object
-var instance1 = pool.Rent();
-
-// You can specify position, rotation, and parent Transform when retrieving
-Transform parent;
-var instance2 = pool.Rent(new Vector3(1f, 2f, 3f), Quaternion.identity, parent);
-
-// Use Return() to return the object
-pool.Return(instance1);
-pool.Return(instance2);
-
-// Dispose() to destroy the pool and all GameObjects
-pool.Dispose();
-```
-
-GameObject instances are activated when retrieved from the pool and deactivated when returned.
-
-## Creating Custom Object Pools
-
-You can create your custom object pool by inheriting from `ObjectPoolBase<T>`.
-
-```cs
-class PooledObject { }
-
-public sealed class CustomObjectPool : ObjectPoolBase<PooledObject>
-{
-    protected override PooledObject CreateInstance()
-    {
-        return new PooledObject();
-    }
-
-    protected override void OnDestroy(PooledObject instance)
-    {
-        // Add actions when the object is destroyed in Clear or Dispose
-    }
-
-    protected override void OnRent(PooledObject instance)
-    {
-        // Add actions when rented
-    }
-
-    protected override void OnReturn(PooledObject instance)
-    {
-        // Add actions when returned
-    }
-}
-```
-
-Additionally, an interface `IObjectPool<T>` is provided, which allows you to implement your own object pool by implementing it.
+🚀 Setup & Installation
+Download the package or drag the folders to project.
 
 ## Callbacks
 
