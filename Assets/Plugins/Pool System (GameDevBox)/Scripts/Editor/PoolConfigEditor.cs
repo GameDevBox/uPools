@@ -1,4 +1,4 @@
-﻿// =======================================================
+// =======================================================
 //  GameDevBox – YouTube
 //  Author: Arian
 //  Link: https://www.youtube.com/@GameDevBox
@@ -26,11 +26,10 @@ public class PoolConfigEditor : Editor
     private SerializedProperty prefabWeights;
     private SerializedProperty overflowBehavior;
 
-
     private string[] existingPoolKeys;
     private string[] poolKeysInFile;
-    private bool showValidation = true;
-    private bool showQuickActions = true;
+    private bool showValidation = false;
+    private bool showQuickActions = false;
     private Vector2 validationScrollPos;
 
     private void OnEnable()
@@ -48,7 +47,6 @@ public class PoolConfigEditor : Editor
         overflowBehavior = serializedObject.FindProperty("overflowBehavior");
 
         EnsureDefaultPoolKeysPath();
-
         RefreshExistingPoolKeys();
         RefreshPoolKeysInFile();
     }
@@ -77,33 +75,33 @@ public class PoolConfigEditor : Editor
     {
         serializedObject.Update();
 
-        EditorGUILayout.Space();
+        EditorGUILayout.Space(5);
         DrawPoolSettings();
-        EditorGUILayout.Space();
+        EditorGUILayout.Space(10);
         DrawAdvancedSettings();
-        EditorGUILayout.Space();
-        DrawValidationSection();
-        EditorGUILayout.Space();
+        EditorGUILayout.Space(10);
         DrawQuickActions();
+        EditorGUILayout.Space(5);
+        DrawValidationSection();
 
         serializedObject.ApplyModifiedProperties();
     }
 
     private void DrawPoolSettings()
     {
-        EditorGUILayout.LabelField("Pool Settings", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("Pool Configuration", EditorStyles.boldLabel);
+        EditorGUILayout.Space(3);
 
-        EditorGUILayout.BeginVertical(GUI.skin.box);
-        EditorGUILayout.LabelField("Pool Key", EditorStyles.boldLabel);
+        // Pool Key Section
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+        EditorGUILayout.LabelField("Pool Key", EditorStyles.miniBoldLabel);
 
         EditorGUILayout.BeginHorizontal();
         EditorGUILayout.PropertyField(poolKeyProperty, GUIContent.none);
-
-        if (GUILayout.Button("Refresh", GUILayout.Width(60)))
+        if (GUILayout.Button("Refresh", EditorStyles.miniButton, GUILayout.Width(60)))
         {
             RefreshExistingPoolKeys();
             RefreshPoolKeysInFile();
-            Repaint();
         }
         EditorGUILayout.EndHorizontal();
 
@@ -112,196 +110,127 @@ public class PoolConfigEditor : Editor
         {
             if (IsDuplicateKey(currentKey))
             {
-                EditorGUILayout.HelpBox("⚠️ This key is used by another PoolConfig", MessageType.Warning);
+                EditorGUILayout.HelpBox("⚠️ Duplicate key - used by another PoolConfig", MessageType.Warning);
             }
             else if (!IsValidCSharpIdentifier(currentKey))
             {
-                EditorGUILayout.HelpBox("⚠️ Key must be a valid C# identifier (letters, numbers, underscore, no spaces)", MessageType.Warning);
+                EditorGUILayout.HelpBox("⚠️ Invalid C# identifier", MessageType.Warning);
             }
             else if (!IsKeyInPoolKeysFile(currentKey))
             {
-                EditorGUILayout.HelpBox("⚠️ Key not found in PoolKeys.cs - Use 'Add Pool Key to PoolKeys' button below", MessageType.Warning);
+                EditorGUILayout.HelpBox("⚠️ Key not found in PoolKeys.cs", MessageType.Warning);
             }
         }
-
         EditorGUILayout.EndVertical();
 
-        EditorGUILayout.Space();
+        EditorGUILayout.Space(5);
+
+        // Basic Settings
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
         EditorGUILayout.PropertyField(poolCategoryProperty);
-
         EditorGUILayout.PropertyField(overflowBehavior);
-        EditorGUILayout.Space();
+        EditorGUILayout.PropertyField(instantiationMode);
+        EditorGUILayout.EndVertical();
 
-        // ========== ADD TRANSFORM SETTINGS HERE ==========
-        EditorGUILayout.Space();
-        EditorGUILayout.LabelField("Transform Settings", EditorStyles.boldLabel);
+        EditorGUILayout.Space(5);
 
-        // Get the transform properties
+        // Weighted Random Section
+        if ((InstantiationMode)instantiationMode.enumValueIndex == InstantiationMode.WeightedRandom)
+        {
+            DrawWeightedRandomSection();
+            EditorGUILayout.Space(5);
+        }
+
+        // Transform Settings
         SerializedProperty transformResetMode = serializedObject.FindProperty("transformResetMode");
         SerializedProperty defaultPosition = serializedObject.FindProperty("defaultPosition");
         SerializedProperty defaultRotation = serializedObject.FindProperty("defaultRotation");
         SerializedProperty defaultScale = serializedObject.FindProperty("defaultScale");
 
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+        EditorGUILayout.LabelField("Transform Reset", EditorStyles.miniBoldLabel);
         EditorGUILayout.PropertyField(transformResetMode);
 
-        // Show custom defaults only when that mode is selected
         if ((TransformResetMode)transformResetMode.enumValueIndex == TransformResetMode.UseCustomDefaults)
         {
-            EditorGUILayout.BeginVertical(GUI.skin.box);
-            EditorGUILayout.LabelField("Custom Transform Defaults", EditorStyles.miniBoldLabel);
-
+            EditorGUILayout.Space(3);
             EditorGUILayout.PropertyField(defaultPosition);
             EditorGUILayout.PropertyField(defaultRotation);
             EditorGUILayout.PropertyField(defaultScale);
-
-            EditorGUILayout.EndVertical();
         }
+        EditorGUILayout.EndVertical();
 
-        // Add help box explaining the modes
-        switch ((TransformResetMode)transformResetMode.enumValueIndex)
+        EditorGUILayout.Space(5);
+
+        // Prefabs & Pool Sizes
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+        EditorGUILayout.LabelField("Prefabs & Pool Size", EditorStyles.miniBoldLabel);
+        EditorGUILayout.PropertyField(prefabsProperty, true);
+
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.PropertyField(initialPoolSizeProperty, new GUIContent("Initial Size"));
+        EditorGUILayout.PropertyField(maxPoolSizeProperty, new GUIContent("Max Size"));
+        EditorGUILayout.EndHorizontal();
+
+        if (initialPoolSizeProperty.intValue <= 0)
         {
-            case TransformResetMode.UsePrefabDefaults:
-                EditorGUILayout.HelpBox("Objects will reset to their original prefab transform values", MessageType.Info);
-                break;
-            case TransformResetMode.UseCustomDefaults:
-                EditorGUILayout.HelpBox("Objects will reset to the custom values defined above", MessageType.Info);
-                break;
-            case TransformResetMode.UseProvidedValues:
-                EditorGUILayout.HelpBox("Objects will use position/rotation/scale provided when calling Get()", MessageType.Info);
-                break;
-            case TransformResetMode.KeepCurrent:
-                EditorGUILayout.HelpBox("Objects will keep their current transform (useful for animated objects)", MessageType.Info);
-                break;
+            EditorGUILayout.HelpBox("Initial pool size must be greater than 0", MessageType.Error);
         }
-        // ========== END TRANSFORM SETTINGS ==========
+        if (maxPoolSizeProperty.intValue < initialPoolSizeProperty.intValue)
+        {
+            EditorGUILayout.HelpBox("Max pool size should be ≥ initial size", MessageType.Warning);
+        }
+        EditorGUILayout.EndVertical();
+    }
 
-        EditorGUILayout.Space();
-        EditorGUILayout.PropertyField(instantiationMode);
-
-        var instantiationModeProp = instantiationMode;
-        var prefabsproperty = prefabsProperty;
-        var weightsProperty = prefabWeights;
-
+    private void DrawWeightedRandomSection()
+    {
         var config = (PoolConfig)target;
         config.SyncWeightsWithPrefabs();
         serializedObject.ApplyModifiedProperties();
         serializedObject.Update();
 
-        if ((InstantiationMode)instantiationModeProp.enumValueIndex == InstantiationMode.WeightedRandom)
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+        EditorGUILayout.LabelField("Prefab Weights", EditorStyles.miniBoldLabel);
+
+        if (prefabsProperty.arraySize == 0)
         {
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Prefab Weights", EditorStyles.boldLabel);
-
-            if (prefabsproperty.arraySize == 0)
+            EditorGUILayout.HelpBox("No prefabs assigned", MessageType.Info);
+        }
+        else
+        {
+            for (int i = 0; i < prefabsProperty.arraySize; i++)
             {
-                EditorGUILayout.HelpBox("No prefabs assigned. Add prefabs to set weights.", MessageType.Info);
-            }
-            else
-            {
-                EditorGUILayout.HelpBox("Adjust weights between 0 (never selected) and 1 (highest probability).", MessageType.Info);
+                var prefabProperty = prefabsProperty.GetArrayElementAtIndex(i);
+                var weightProperty = prefabWeights.GetArrayElementAtIndex(i);
 
-                for (int i = 0; i < prefabsproperty.arraySize; i++)
-                {
-                    var prefabProperty = prefabsproperty.GetArrayElementAtIndex(i);
-                    var weightProperty = weightsProperty.GetArrayElementAtIndex(i);
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
 
-                    EditorGUILayout.BeginVertical(GUI.skin.box);
-                    EditorGUILayout.BeginHorizontal();
-
-                    GameObject prefab = prefabProperty.objectReferenceValue as GameObject;
-                    Texture2D prefabIcon = AssetPreview.GetMiniThumbnail(prefab);
-                    string prefabName = prefab != null ? prefab.name : "Null Prefab";
-
-                    GUIContent prefabLabel = new GUIContent($" {prefabName}", prefabIcon);
-                    EditorGUILayout.LabelField(prefabLabel, GUILayout.Width(150));
-
-                    EditorGUILayout.EndHorizontal();
-
-                    EditorGUILayout.BeginHorizontal();
-
-                    float weightValue = weightProperty.floatValue;
-                    EditorGUILayout.LabelField("Weight:", GUILayout.Width(50));
-
-                    float newWeight = EditorGUILayout.Slider(weightValue, 0f, 1f);
-
-                    if (Mathf.Abs(newWeight - weightValue) > 0.001f)
-                    {
-                        weightProperty.floatValue = newWeight;
-                    }
-
-                    EditorGUILayout.EndHorizontal();
-
-                    float normalizedPercent = config.GetNormalizedWeight(i) * 100f;
-                    EditorGUILayout.BeginHorizontal();
-
-                    Rect rect = GUILayoutUtility.GetRect(100, 16);
-                    EditorGUI.ProgressBar(rect, normalizedPercent / 100f, $"{normalizedPercent:F1}% chance");
-
-                    EditorGUILayout.EndHorizontal();
-
-                    EditorGUILayout.EndVertical();
-                    EditorGUILayout.Space();
-                }
-
-                EditorGUILayout.Space();
-                EditorGUILayout.BeginVertical(GUI.skin.box);
-                EditorGUILayout.LabelField("Weight Summary", EditorStyles.miniBoldLabel);
-
-                float totalWeight = config.GetTotalWeight();
-                EditorGUILayout.LabelField($"Total Raw Weight: {totalWeight:F2}", EditorStyles.miniLabel);
-
-                if (totalWeight <= 0)
-                {
-                    EditorGUILayout.HelpBox("Warning: All weights are zero! No prefabs will be selected.", MessageType.Warning);
-                }
-                else
-                {
-                    EditorGUILayout.Space();
-                    EditorGUILayout.LabelField("Actual Probabilities:", EditorStyles.miniBoldLabel);
-                    for (int i = 0; i < prefabsproperty.arraySize; i++)
-                    {
-                        var prefabProperty = prefabsproperty.GetArrayElementAtIndex(i);
-                        string prefabName = prefabProperty.objectReferenceValue ? prefabProperty.objectReferenceValue.name : "Null Prefab";
-                        float probability = config.GetNormalizedWeight(i) * 100f;
-                        EditorGUILayout.LabelField($"• {prefabName}: {probability:F1}%", EditorStyles.miniLabel);
-                    }
-                }
-
-                EditorGUILayout.EndVertical();
+                GameObject prefab = prefabProperty.objectReferenceValue as GameObject;
+                string prefabName = prefab != null ? prefab.name : "Null Prefab";
 
                 EditorGUILayout.BeginHorizontal();
-                if (GUILayout.Button("Equal Weights", EditorStyles.miniButton))
-                {
-                    SetEqualWeights(config);
-                }
-                if (GUILayout.Button("Reset All", EditorStyles.miniButton))
-                {
-                    ResetAllWeights(config);
-                }
-                if (GUILayout.Button("Normalize", EditorStyles.miniButton))
-                {
-                    NormalizeWeights(config);
-                }
+                EditorGUILayout.LabelField(prefabName, EditorStyles.miniBoldLabel, GUILayout.Width(150));
+                float weightValue = EditorGUILayout.Slider(weightProperty.floatValue, 0f, 1f);
+                weightProperty.floatValue = weightValue;
                 EditorGUILayout.EndHorizontal();
+
+                float probability = config.GetNormalizedWeight(i) * 100f;
+                Rect rect = GUILayoutUtility.GetRect(100, 12);
+                EditorGUI.ProgressBar(rect, probability / 100f, $"{probability:F1}%");
+
+                EditorGUILayout.EndVertical();
+                EditorGUILayout.Space(2);
             }
-        }
 
-        EditorGUILayout.Space();
-        EditorGUILayout.PropertyField(prefabsproperty, true);
-
-        EditorGUILayout.BeginHorizontal();
-        EditorGUILayout.PropertyField(initialPoolSizeProperty, GUILayout.MinWidth(120));
-        EditorGUILayout.PropertyField(maxPoolSizeProperty, GUILayout.MinWidth(120));
-        EditorGUILayout.EndHorizontal();
-
-        if (initialPoolSizeProperty.intValue <= 0)
-        {
-            EditorGUILayout.HelpBox("Initial pool size must be greater than 0.", MessageType.Error);
+            // Weight Controls
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Equal Weights", EditorStyles.miniButton)) SetEqualWeights(config);
+            if (GUILayout.Button("Reset All", EditorStyles.miniButton)) ResetAllWeights(config);
+            if (GUILayout.Button("Normalize", EditorStyles.miniButton)) NormalizeWeights(config);
+            EditorGUILayout.EndHorizontal();
         }
-        if (maxPoolSizeProperty.intValue < initialPoolSizeProperty.intValue)
-        {
-            EditorGUILayout.HelpBox("Max pool size should be greater than or equal to initial size.", MessageType.Warning);
-        }
+        EditorGUILayout.EndVertical();
     }
 
     private void SetEqualWeights(PoolConfig config)
@@ -343,45 +272,40 @@ public class PoolConfigEditor : Editor
 
     private void DrawQuickActions()
     {
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+        EditorGUILayout.BeginHorizontal();
         showQuickActions = EditorGUILayout.Foldout(showQuickActions, "Quick Actions", true);
-        if (!showQuickActions) return;
+        EditorGUILayout.EndHorizontal();
 
-        EditorGUILayout.BeginVertical(GUI.skin.box);
-
-        string currentKey = poolKeyProperty.stringValue;
-        bool canAddToPoolKeys = !string.IsNullOrEmpty(currentKey) &&
-                               IsValidCSharpIdentifier(currentKey) &&
-                               !IsKeyInPoolKeysFile(currentKey);
-
-        EditorGUI.BeginDisabledGroup(!canAddToPoolKeys);
-        if (GUILayout.Button("Add Pool Key to PoolKeys"))
+        if (showQuickActions)
         {
-            AddKeyToPoolKeys();
-        }
-        EditorGUI.EndDisabledGroup();
+            EditorGUILayout.BeginVertical(GUI.skin.box);
 
-        if (!canAddToPoolKeys && !string.IsNullOrEmpty(currentKey))
-        {
-            if (IsKeyInPoolKeysFile(currentKey))
+            string currentKey = poolKeyProperty.stringValue;
+            bool canAddToPoolKeys = !string.IsNullOrEmpty(currentKey) &&
+                                   IsValidCSharpIdentifier(currentKey) &&
+                                   !IsKeyInPoolKeysFile(currentKey);
+
+            EditorGUI.BeginDisabledGroup(!canAddToPoolKeys);
+            if (GUILayout.Button("Add Pool Key to PoolKeys"))
             {
-                EditorGUILayout.HelpBox("✓ Key already exists in PoolKeys", MessageType.Info);
+                AddKeyToPoolKeys();
             }
-            else if (!IsValidCSharpIdentifier(currentKey))
+            EditorGUI.EndDisabledGroup();
+
+            if (GUILayout.Button("Show Existing Pool Keys"))
             {
-                EditorGUILayout.HelpBox("Key must be valid before adding", MessageType.Warning);
+                ShowExistingPoolKeys();
             }
-        }
 
-        if (GUILayout.Button("Show Existing Pool Keys"))
-        {
-            ShowExistingPoolKeys();
-        }
+            if (GUILayout.Button("Validate All Configs"))
+            {
+                ValidateAllPoolConfigs();
+            }
 
-        if (GUILayout.Button("Validate All Configs"))
-        {
-            ValidateAllPoolConfigs();
+            EditorGUILayout.EndVertical();
         }
-
         EditorGUILayout.EndVertical();
     }
 
@@ -656,64 +580,39 @@ public class PoolConfigEditor : Editor
 
     private void DrawAdvancedSettings()
     {
-        EditorGUILayout.LabelField("Advanced Settings", EditorStyles.boldLabel);
-        EditorGUILayout.BeginVertical(GUI.skin.box);
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
 
-        EditorGUILayout.PropertyField(prewarmOnStartProperty);
-        EditorGUILayout.PropertyField(logPoolActivityProperty);
+        EditorGUILayout.LabelField("Advanced Settings", EditorStyles.miniBoldLabel);
+        EditorGUILayout.PropertyField(prewarmOnStartProperty, new GUIContent("Prewarm on Start"));
+        EditorGUILayout.PropertyField(logPoolActivityProperty, new GUIContent("Log Activity"));
 
-        EditorGUILayout.Space();
-        EditorGUILayout.LabelField("Editor Settings", EditorStyles.boldLabel);
+        EditorGUILayout.Space(3);
+        EditorGUILayout.LabelField("Editor Settings", EditorStyles.miniBoldLabel);
 
         EditorGUILayout.BeginHorizontal();
-        EditorGUILayout.PropertyField(poolKeysPathProperty, GUILayout.ExpandWidth(true));
-
-        if (GUILayout.Button("Browse", GUILayout.Width(60)))
+        EditorGUILayout.PropertyField(poolKeysPathProperty, new GUIContent("PoolKeys Path"));
+        if (GUILayout.Button("Browse", EditorStyles.miniButton, GUILayout.Width(60)))
         {
             string selectedPath = EditorUtility.OpenFilePanel("Select PoolKeys.cs", "Assets", "cs");
-            if (!string.IsNullOrEmpty(selectedPath))
+            if (!string.IsNullOrEmpty(selectedPath) && selectedPath.StartsWith(Application.dataPath))
             {
-                if (selectedPath.StartsWith(Application.dataPath))
-                {
-                    selectedPath = "Assets" + selectedPath.Substring(Application.dataPath.Length);
-                }
-
-                // Validate filename
+                selectedPath = "Assets" + selectedPath.Substring(Application.dataPath.Length);
                 string fileName = Path.GetFileNameWithoutExtension(selectedPath);
-                if (fileName != "PoolKeys")
-                {
-                    EditorUtility.DisplayDialog("Invalid File", "The selected file must be named 'PoolKeys.cs'", "OK");
-                }
-                else
+                if (fileName == "PoolKeys")
                 {
                     poolKeysPathProperty.stringValue = selectedPath;
                     serializedObject.ApplyModifiedProperties();
                     RefreshPoolKeysInFile();
                 }
+                else
+                {
+                    EditorUtility.DisplayDialog("Invalid File", "File must be named 'PoolKeys.cs'", "OK");
+                }
             }
         }
         EditorGUILayout.EndHorizontal();
 
-
-        string currentPath = poolKeysPathProperty.stringValue;
-        if (!string.IsNullOrEmpty(currentPath))
-        {
-            string fileName = Path.GetFileNameWithoutExtension(currentPath);
-            if (fileName != "PoolKeys")
-            {
-                EditorGUILayout.HelpBox("File must be named 'PoolKeys.cs'", MessageType.Error);
-            }
-            else if (!File.Exists(currentPath))
-            {
-                EditorGUILayout.HelpBox("File does not exist at the specified path", MessageType.Warning);
-            }
-            else
-            {
-                EditorGUILayout.HelpBox("✓ Valid PoolKeys.cs file", MessageType.Info);
-            }
-        }
-
-        if (GUILayout.Button("Reset to Default Path"))
+        if (GUILayout.Button("Reset to Default Path", EditorStyles.miniButton))
         {
             poolKeysPathProperty.stringValue = "Assets/_Content/_Script/Runtime/Others/PoolKeys.cs";
             serializedObject.ApplyModifiedProperties();
@@ -725,80 +624,65 @@ public class PoolConfigEditor : Editor
 
     private void DrawValidationSection()
     {
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+        EditorGUILayout.BeginHorizontal();
         showValidation = EditorGUILayout.Foldout(showValidation, "Validation", true);
-        if (!showValidation) return;
+        EditorGUILayout.EndHorizontal();
 
-        EditorGUILayout.BeginVertical(GUI.skin.box);
-
-        var config = (PoolConfig)target;
-        var issues = new List<string>();
-        var warnings = new List<string>();
-
-        // Pool Key validation
-        if (string.IsNullOrEmpty(config.poolKey))
+        if (showValidation)
         {
-            issues.Add("Pool Key is required");
-        }
-        else
-        {
-            if (!IsValidCSharpIdentifier(config.poolKey))
+            EditorGUILayout.BeginVertical(GUI.skin.box);
+
+            var config = (PoolConfig)target;
+            var issues = new List<string>();
+            var warnings = new List<string>();
+
+            // Validation logic (same as before)
+            if (string.IsNullOrEmpty(config.poolKey))
             {
-                issues.Add("Pool Key must be a valid C# identifier");
+                issues.Add("Pool Key is required");
+            }
+            else
+            {
+                if (!IsValidCSharpIdentifier(config.poolKey))
+                    issues.Add("Pool Key must be a valid C# identifier");
+                if (IsDuplicateKey(config.poolKey))
+                    warnings.Add("This Pool Key is used by another PoolConfig");
+                if (!IsKeyInPoolKeysFile(config.poolKey))
+                    warnings.Add("Key not found in PoolKeys.cs");
             }
 
-            if (IsDuplicateKey(config.poolKey))
+            if (config.prefabs == null || config.prefabs.Length == 0)
+                issues.Add("At least one prefab is required");
+            else if (config.prefabs.Any(p => p == null))
+                warnings.Add("Some prefab references are null");
+
+            if (config.initialPoolSize <= 0)
+                issues.Add("Initial pool size must be greater than 0");
+            if (config.maxPoolSize < config.initialPoolSize)
+                warnings.Add("Max pool size is less than initial size");
+
+            // Display results
+            if (issues.Count == 0 && warnings.Count == 0)
             {
-                warnings.Add("This Pool Key is used by another PoolConfig");
+                EditorGUILayout.HelpBox("✅ Configuration is valid", MessageType.Info);
+            }
+            else
+            {
+                validationScrollPos = EditorGUILayout.BeginScrollView(validationScrollPos,
+                    GUILayout.Height(Mathf.Min((issues.Count + warnings.Count) * 40, 200)));
+
+                foreach (var issue in issues)
+                    EditorGUILayout.HelpBox($"❌ {issue}", MessageType.Error);
+                foreach (var warning in warnings)
+                    EditorGUILayout.HelpBox($"⚠️ {warning}", MessageType.Warning);
+
+                EditorGUILayout.EndScrollView();
             }
 
-            if (!IsKeyInPoolKeysFile(config.poolKey))
-            {
-                warnings.Add("Key not found in PoolKeys.cs - Use 'Add Pool Key to PoolKeys' button");
-            }
+            EditorGUILayout.EndVertical();
         }
-
-        // Prefabs validation
-        if (config.prefabs == null || config.prefabs.Length == 0)
-        {
-            issues.Add("At least one prefab is required");
-        }
-        else if (config.prefabs.Any(p => p == null))
-        {
-            warnings.Add("Some prefab references are null");
-        }
-
-        // Pool size validation
-        if (config.initialPoolSize <= 0)
-        {
-            issues.Add("Initial pool size must be greater than 0");
-        }
-        if (config.maxPoolSize < config.initialPoolSize)
-        {
-            warnings.Add("Max pool size is less than initial size");
-        }
-
-        // Display results
-        if (issues.Count == 0 && warnings.Count == 0)
-        {
-            EditorGUILayout.HelpBox("✅ Configuration is valid", MessageType.Info);
-        }
-        else
-        {
-            validationScrollPos = EditorGUILayout.BeginScrollView(validationScrollPos, GUILayout.Height(Mathf.Min((issues.Count + warnings.Count) * 40, 200)));
-
-            foreach (var issue in issues)
-            {
-                EditorGUILayout.HelpBox($"❌ {issue}", MessageType.Error);
-            }
-
-            foreach (var warning in warnings)
-            {
-                EditorGUILayout.HelpBox($"⚠️ {warning}", MessageType.Warning);
-            }
-
-            EditorGUILayout.EndScrollView();
-        }
-
         EditorGUILayout.EndVertical();
     }
 
