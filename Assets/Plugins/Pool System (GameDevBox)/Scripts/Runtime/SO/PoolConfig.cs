@@ -45,28 +45,23 @@ public enum TransformResetMode
 [CreateAssetMenu(fileName = "PoolConfig", menuName = "Pooling/Pool Config")]
 public class PoolConfig : ScriptableObject
 {
-    [Header("Pool Settings")]
     public string poolKey;
     public string poolCategory;
     public GameObject[] prefabs;
     public int initialPoolSize = 10;
     public int maxPoolSize = 100;
 
-    [Header("Instantiation Settings")]
     public InstantiationMode instantiationMode = InstantiationMode.Sequential;
     public float[] prefabWeights;
 
-    [Header("Transform Settings")]
     public TransformResetMode transformResetMode = TransformResetMode.UsePrefabDefaults;
     public Vector3 defaultPosition = Vector3.zero;
     public Quaternion defaultRotation = Quaternion.identity;
     public Vector3 defaultScale = Vector3.one;
 
-    [Header("Overflow Behavior")]
     [Tooltip("What happens when the pool reaches maximum capacity")]
     public PoolOverflowBehavior overflowBehavior = PoolOverflowBehavior.ReuseOldest;
 
-    [Header("Advanced Settings")]
     public bool prewarmOnStart = true;
     public bool logPoolActivity = false;
 
@@ -200,4 +195,5 @@ public class TrackedObjectPool
     {
         TotalCreated++;
     }
+
 }
