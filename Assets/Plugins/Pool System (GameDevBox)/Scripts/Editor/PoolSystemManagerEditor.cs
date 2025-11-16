@@ -1,4 +1,9 @@
-﻿// =======================================================
+using System.Collections.Generic;
+using System.Linq;
+using UnityEditor;
+using UnityEngine;
+
+// =======================================================
 //  GameDevBox – YouTube
 //  Author: Arian
 //  Link: https://www.youtube.com/@GameDevBox
@@ -26,6 +31,11 @@ public class PoolSystemManagerEditor : Editor
     private string[] poolKeysInFile;
     private Dictionary<string, List<PoolConfig>> categorizedPools;
 
+    // Minimalist color scheme
+    private static readonly Color SECTION_BG = new Color(0.2f, 0.2f, 0.2f, 0.3f);
+    private static readonly Color CARD_BG = new Color(0.15f, 0.15f, 0.15f, 0.2f);
+    private static readonly Color ACCENT_COLOR = new Color(0.3f, 0.5f, 0.9f, 0.1f);
+
     private void OnEnable()
     {
         poolConfigsProp = serializedObject.FindProperty("poolConfigs");
@@ -41,33 +51,41 @@ public class PoolSystemManagerEditor : Editor
     {
         serializedObject.Update();
 
-        EditorGUILayout.Space();
+        EditorGUILayout.Space(5);
 
+        DrawHeader();
+
+        EditorGUILayout.Space(10);
         DrawPoolParentSettings();
-
-        EditorGUILayout.Space();
-
+        EditorGUILayout.Space(10);
         DrawConfigListSection();
-
-        EditorGUILayout.Space();
-
+        EditorGUILayout.Space(10);
         DrawSearchAndActions();
-
-        EditorGUILayout.Space();
-
+        EditorGUILayout.Space(10);
         DrawCategoryOverview();
-
-        EditorGUILayout.Space();
-
+        EditorGUILayout.Space(10);
         DrawPoolConfigurationsOverview();
 
         serializedObject.ApplyModifiedProperties();
     }
 
+    private void DrawHeader()
+    {
+        EditorGUILayout.BeginVertical();
+        var titleStyle = new GUIStyle(EditorStyles.largeLabel)
+        {
+            fontSize = 16,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleLeft
+        };
+        EditorGUILayout.LabelField("Pool System Manager", titleStyle);
+        EditorGUILayout.EndVertical();
+    }
+
     private void DrawPoolParentSettings()
     {
-        EditorGUILayout.LabelField("Pool Parent Settings", EditorStyles.boldLabel);
-        EditorGUILayout.BeginVertical(GUI.skin.box);
+        DrawSectionHeader("Settings");
+        EditorGUILayout.BeginVertical(GetSectionStyle());
 
         EditorGUILayout.PropertyField(poolParentProp);
         EditorGUILayout.PropertyField(groupPoolsByCategoryProp);
@@ -75,19 +93,6 @@ public class PoolSystemManagerEditor : Editor
         if (groupPoolsByCategoryProp.boolValue)
         {
             EditorGUILayout.PropertyField(defaultCategoryNameProp);
-
-            var configs = GetAllPoolConfigs().ToList();
-            var categories = configs.Select(c => GetPoolCategory(c)).Distinct().OrderBy(c => c).ToList();
-
-            EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField($"Categories: {categories.Count}", GUILayout.Width(100));
-            EditorGUILayout.LabelField($"Pools: {configs.Count}", GUILayout.Width(80));
-            EditorGUILayout.EndHorizontal();
-
-            if (categories.Count > 0)
-            {
-                EditorGUILayout.HelpBox($"Categories: {string.Join(", ", categories)}", MessageType.Info);
-            }
         }
 
         EditorGUILayout.EndVertical();
@@ -95,31 +100,25 @@ public class PoolSystemManagerEditor : Editor
 
     private void DrawConfigListSection()
     {
-        EditorGUILayout.BeginVertical(GUI.skin.box);
+        EditorGUILayout.BeginVertical(GetSectionStyle());
 
-        showConfigList = EditorGUILayout.Foldout(showConfigList, "Pool Configurations List", true);
+        showConfigList = EditorGUILayout.Foldout(showConfigList, "Pool Configurations", true);
 
         if (showConfigList)
         {
-            EditorGUILayout.HelpBox("Drag and drop PoolConfig assets here to register them with the manager.", MessageType.Info);
+            EditorGUILayout.HelpBox("Drag and drop PoolConfig assets here to register them.", MessageType.Info);
 
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.PropertyField(poolConfigsProp, true);
 
-            EditorGUILayout.BeginVertical(GUILayout.Width(100));
-            if (GUILayout.Button("Refresh List"))
+            EditorGUILayout.BeginVertical(GUILayout.Width(80));
+            if (GUILayout.Button("Refresh", EditorStyles.miniButton))
             {
                 RefreshConfigList();
             }
-            if (GUILayout.Button("Clean Nulls"))
+            if (GUILayout.Button("Clean Nulls", EditorStyles.miniButton))
             {
                 RemoveNullConfigs();
-            }
-            if (GUILayout.Button("Refresh Keys"))
-            {
-                RefreshPoolKeysCache();
-                CategorizePools();
-                Repaint();
             }
             EditorGUILayout.EndVertical();
 
@@ -131,71 +130,62 @@ public class PoolSystemManagerEditor : Editor
 
     private void DrawSearchAndActions()
     {
+        // Search field
         EditorGUILayout.BeginHorizontal();
-        searchText = EditorGUILayout.TextField("Search Pools", searchText);
-        if (GUILayout.Button("Clear", GUILayout.Width(60)))
+        searchText = EditorGUILayout.TextField("", searchText, GUI.skin.FindStyle("SearchTextField"));
+        if (GUILayout.Button("", GUI.skin.FindStyle("SearchCancelButton")))
         {
             searchText = "";
+            GUI.FocusControl(null);
         }
         EditorGUILayout.EndHorizontal();
 
+        // Action buttons
         EditorGUILayout.BeginHorizontal();
-
-        if (GUILayout.Button("Create New Pool"))
+        if (GUILayout.Button("Create New", EditorStyles.miniButton))
         {
             CreateNewPoolConfig();
         }
-
-        if (GUILayout.Button("Sort A-Z"))
+        if (GUILayout.Button("Sort A-Z", EditorStyles.miniButton))
         {
             SortPoolConfigsAlphabetically();
         }
-
-        if (GUILayout.Button("Sort by Category"))
-        {
-            SortPoolConfigsByCategory();
-        }
-
-        if (GUILayout.Button("Refresh View"))
+        if (GUILayout.Button("Refresh Keys", EditorStyles.miniButton))
         {
             RefreshPoolKeysCache();
             CategorizePools();
             Repaint();
         }
-
         EditorGUILayout.EndHorizontal();
 
+        // Stats
         var configs = GetAllPoolConfigs().ToList();
         var readyCount = configs.Count(c => GetConfigStatus(c) == "Ready");
         var warningCount = configs.Count(c => GetConfigStatus(c) == "Warning");
         var errorCount = configs.Count(c => GetConfigStatus(c).StartsWith("Error"));
-        var categoryCount = configs.Select(c => GetPoolCategory(c)).Distinct().Count();
 
         EditorGUILayout.BeginHorizontal();
-        EditorGUILayout.LabelField($"Total: {configs.Count}", GUILayout.Width(70));
-        EditorGUILayout.LabelField($"Categories: {categoryCount}", GUILayout.Width(80));
-        EditorGUILayout.LabelField($"Ready: {readyCount}", GUILayout.Width(70));
+        GUILayout.FlexibleSpace();
+        EditorGUILayout.LabelField($"{configs.Count} Pools", GetMiniLabelStyle(), GUILayout.Width(70));
+        EditorGUILayout.LabelField($"{readyCount} Ready", GetStatusStyle("Ready"), GUILayout.Width(60));
         if (warningCount > 0)
-        {
-            EditorGUILayout.LabelField($"Warnings: {warningCount}", GetStatusStyle("Warning"), GUILayout.Width(80));
-        }
+            EditorGUILayout.LabelField($"{warningCount} Warn", GetStatusStyle("Warning"), GUILayout.Width(50));
         if (errorCount > 0)
-        {
-            EditorGUILayout.LabelField($"Errors: {errorCount}", GetStatusStyle("Error"), GUILayout.Width(70));
-        }
+            EditorGUILayout.LabelField($"{errorCount} Error", GetStatusStyle("Error"), GUILayout.Width(50));
+        GUILayout.FlexibleSpace();
         EditorGUILayout.EndHorizontal();
     }
 
     private void DrawCategoryOverview()
     {
-        showCategoryView = EditorGUILayout.Foldout(showCategoryView, "Category Overview", true);
+        showCategoryView = EditorGUILayout.Foldout(showCategoryView, "Categories", true);
         if (!showCategoryView) return;
 
-        EditorGUILayout.BeginVertical(GUI.skin.box);
+        EditorGUILayout.BeginVertical(GetSectionStyle());
 
         if (categorizedPools == null || categorizedPools.Count == 0)
         {
-            EditorGUILayout.HelpBox("No pools categorized. Add pool configurations to see categories.", MessageType.Info);
+            EditorGUILayout.HelpBox("No pools categorized.", MessageType.Info);
             EditorGUILayout.EndVertical();
             return;
         }
@@ -205,69 +195,27 @@ public class PoolSystemManagerEditor : Editor
             var pools = categorizedPools[category];
             if (pools == null || pools.Count == 0) continue;
 
+            EditorGUILayout.BeginVertical(GetCardStyle());
 
-            Color origColor = GUI.backgroundColor;
-            GUI.backgroundColor = GetCategoryColor(category == defaultCategoryNameProp.stringValue ? null : category);
-            EditorGUILayout.BeginVertical("Window");
-            GUI.backgroundColor = origColor;
-
+            // Category header
             EditorGUILayout.BeginHorizontal();
-
-            EditorGUILayout.BeginHorizontal(GUILayout.Width(250));
-            GUIStyle categoryStyle = new GUIStyle(EditorStyles.boldLabel)
+            var categoryStyle = new GUIStyle(EditorStyles.boldLabel)
             {
-                fontSize = 18,
-                alignment = TextAnchor.MiddleLeft
+                fontSize = 12
             };
-            EditorGUILayout.LabelField(category, categoryStyle);
+            EditorGUILayout.LabelField(category, categoryStyle, GUILayout.Width(150));
+
+            GUILayout.FlexibleSpace();
 
             int readyPools = pools.Count(p => GetConfigStatus(p) == "Ready");
             int totalObjects = pools.Sum(p => p.initialPoolSize);
 
-            GUILayout.Space(8); // small spacing between name and counts
-            EditorGUILayout.LabelField($"Ready {readyPools}/{pools.Count}", GUILayout.Width(70));
-            EditorGUILayout.LabelField($"Total {totalObjects}", GUILayout.Width(70));
+            EditorGUILayout.LabelField($"{readyPools}/{pools.Count} ready", GetMiniLabelStyle(), GUILayout.Width(70));
+            EditorGUILayout.LabelField($"{totalObjects} total", GetMiniLabelStyle(), GUILayout.Width(70));
             EditorGUILayout.EndHorizontal();
 
-            GUILayout.FlexibleSpace();
-            EditorGUILayout.EndHorizontal();
-
-            GUILayout.Space(12);
-
-            foreach (var pool in pools.OrderBy(p => p.poolKey))
-            {
-                var status = GetConfigStatus(pool);
-                int validPrefabs = pool.prefabs?.Count(p => p != null) ?? 0;
-
-                EditorGUILayout.BeginHorizontal();
-
-                EditorGUILayout.BeginVertical(GUILayout.Width(220));
-                EditorGUILayout.LabelField(pool.poolKey, EditorStyles.boldLabel);
-                EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField($"Prefabs: {validPrefabs}", GUILayout.Width(70));
-                EditorGUILayout.LabelField($"Size: {pool.initialPoolSize}", GUILayout.Width(60));
-                EditorGUILayout.LabelField($"Max: {pool.maxPoolSize}", GUILayout.Width(60));
-                EditorGUILayout.EndHorizontal();
-                EditorGUILayout.EndVertical();
-
-                EditorGUILayout.BeginVertical(GUILayout.Width(100));
-                EditorGUILayout.LabelField(status, GetStatusStyle(status), GUILayout.Width(80));
-                GUIContent selectIcon = EditorGUIUtility.IconContent("d_ViewToolMove");
-                selectIcon.tooltip = "Select PoolConfig";
-                if (GUILayout.Button(selectIcon, GUILayout.Width(22), GUILayout.Height(18)))
-                {
-                    Selection.activeObject = pool;
-                    EditorGUIUtility.PingObject(pool);
-                }
-                EditorGUILayout.EndVertical();
-
-                EditorGUILayout.EndHorizontal();
-                GUILayout.Space(3);
-            }
-
-            GUILayout.Space(6);
             EditorGUILayout.EndVertical();
-            GUILayout.Space(8);
+            GUILayout.Space(4);
         }
 
         EditorGUILayout.EndVertical();
@@ -293,7 +241,7 @@ public class PoolSystemManagerEditor : Editor
         {
             if (poolConfigsProp.arraySize == 0)
             {
-                EditorGUILayout.HelpBox("No pool configurations added. Click 'Create New Pool' or drag PoolConfig assets into the list above.", MessageType.Info);
+                EditorGUILayout.HelpBox("No pool configurations added.", MessageType.Info);
             }
             else
             {
@@ -302,128 +250,142 @@ public class PoolSystemManagerEditor : Editor
             return;
         }
 
-        EditorGUILayout.LabelField($"Pool Overview ({configs.Count}):", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField($"Pool Overview ({configs.Count})", EditorStyles.boldLabel);
+        scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition, GUILayout.Height(300));
 
-        scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
-
-        if (groupPoolsByCategoryProp.boolValue)
+        foreach (var config in configs)
         {
-            var groupedConfigs = configs.GroupBy(c => GetPoolCategory(c))
-                                      .OrderBy(g => g.Key);
-
-            foreach (var group in groupedConfigs)
-            {
-                EditorGUILayout.LabelField($"Category: {group.Key} ({group.Count()} pools)", EditorStyles.boldLabel);
-
-                foreach (var config in group.OrderBy(c => c.poolKey))
-                {
-                    DrawPoolConfigCard(config, GetCategoryColor(config.poolCategory));
-                }
-
-                EditorGUILayout.Space();
-            }
-        }
-        else
-        {
-            foreach (var config in configs)
-            {
-                DrawPoolConfigCard(config, GetCategoryColor(config.poolCategory));
-            }
+            DrawPoolConfigCard(config);
         }
 
         EditorGUILayout.EndScrollView();
     }
 
-    private void DrawPoolConfigCard(PoolConfig config, Color backgroundColor)
+    private void DrawPoolConfigCard(PoolConfig config)
     {
         if (config == null) return;
 
-        Color origColor = GUI.backgroundColor;
-        GUI.backgroundColor = backgroundColor;
-        EditorGUILayout.BeginVertical("Window");
-        GUI.backgroundColor = origColor;
+        EditorGUILayout.BeginVertical(GetCardStyle());
 
-        GUILayout.Space(4);
-
+        // Header row
         EditorGUILayout.BeginHorizontal();
 
+        // Pool info
         EditorGUILayout.BeginVertical();
-        EditorGUILayout.LabelField(config.poolKey, EditorStyles.boldLabel);
+        var keyStyle = new GUIStyle(EditorStyles.boldLabel)
+        {
+            fontSize = 11
+        };
+        EditorGUILayout.LabelField(config.poolKey, keyStyle);
+
         if (groupPoolsByCategoryProp.boolValue && !string.IsNullOrEmpty(config.poolCategory))
-            EditorGUILayout.LabelField($"Category: {config.poolCategory}", EditorStyles.miniLabel);
+        {
+            EditorGUILayout.LabelField(config.poolCategory, GetMiniLabelStyle());
+        }
         EditorGUILayout.EndVertical();
 
-        var status = GetConfigStatus(config);
-        EditorGUILayout.LabelField(status, GetStatusStyle(status), GUILayout.Width(80));
         GUILayout.FlexibleSpace();
 
-        GUIContent selectIcon = EditorGUIUtility.IconContent("d_ViewToolZoom On");
-        selectIcon.tooltip = "Select & Ping this PoolConfig";
-        if (GUILayout.Button(selectIcon, GUILayout.Width(25), GUILayout.Height(20)))
+        // Status
+        var status = GetConfigStatus(config);
+        EditorGUILayout.LabelField(status, GetStatusStyle(status), GUILayout.Width(60));
+
+        // Action buttons
+        DrawIconButton("d_ViewToolZoom On", "Select", () =>
         {
             Selection.activeObject = config;
             EditorGUIUtility.PingObject(config);
-        }
+        });
 
-        GUIContent copyIcon = EditorGUIUtility.IconContent("Clipboard");
-        copyIcon.tooltip = "Copy pool key";
-        if (GUILayout.Button(copyIcon, GUILayout.Width(25), GUILayout.Height(20)))
+        DrawIconButton("Clipboard", "Copy Key", () =>
         {
             GUIUtility.systemCopyBuffer = config.poolKey;
             Debug.Log($"Copied pool key: {config.poolKey}");
-        }
+        });
 
         if (status == "Missing Key")
         {
-            GUIContent addKeyIcon = EditorGUIUtility.IconContent("CreateAddNew");
-            addKeyIcon.tooltip = "Add missing pool key";
-            if (GUILayout.Button(addKeyIcon, GUILayout.Width(25), GUILayout.Height(20)))
-                AddKeyToPoolKeys(config);
+            DrawIconButton("CreateAddNew", "Add Key", () => AddKeyToPoolKeys(config));
         }
 
-        GUIContent removeIcon = EditorGUIUtility.IconContent("TreeEditor.Trash");
-        removeIcon.tooltip = "Remove this config from list";
-        if (GUILayout.Button(removeIcon, GUILayout.Width(25), GUILayout.Height(20)))
-        {
-            RemoveConfigFromList(config);
-            EditorGUILayout.EndHorizontal();
-            EditorGUILayout.EndVertical();
-            return;
-        }
+        DrawIconButton("TreeEditor.Trash", "Remove", () => RemoveConfigFromList(config));
 
         EditorGUILayout.EndHorizontal();
 
-        GUILayout.Space(4);
-
+        // Details row
         EditorGUILayout.BeginHorizontal();
         var prefabCount = config.prefabs?.Length ?? 0;
         var validPrefabs = config.prefabs?.Count(p => p != null) ?? 0;
 
-        EditorGUILayout.LabelField($"Prefabs: {validPrefabs}/{prefabCount}", GUILayout.Width(100));
-        EditorGUILayout.LabelField($"Size: {config.initialPoolSize}", GUILayout.Width(80));
-        EditorGUILayout.LabelField($"Max: {config.maxPoolSize}", GUILayout.Width(80));
-        if (config.prewarmOnStart) EditorGUILayout.LabelField("Prewarm", GUILayout.Width(55));
-        if (config.logPoolActivity) EditorGUILayout.LabelField("Logging", GUILayout.Width(55));
+        EditorGUILayout.LabelField($"Prefabs: {validPrefabs}/{prefabCount}", GetMiniLabelStyle(), GUILayout.Width(80));
+        EditorGUILayout.LabelField($"Size: {config.initialPoolSize}", GetMiniLabelStyle(), GUILayout.Width(60));
+        EditorGUILayout.LabelField($"Max: {config.maxPoolSize}", GetMiniLabelStyle(), GUILayout.Width(60));
+
+        if (config.prewarmOnStart)
+            EditorGUILayout.LabelField("Prewarm", GetMiniLabelStyle(), GUILayout.Width(50));
+        if (config.logPoolActivity)
+            EditorGUILayout.LabelField("Logging", GetMiniLabelStyle(), GUILayout.Width(50));
+
         EditorGUILayout.EndHorizontal();
 
+        // Error message if needed
         if (status != "Ready")
+        {
             EditorGUILayout.HelpBox(GetConfigErrorMessage(config), MessageType.Warning);
+        }
 
-        GUILayout.Space(4);
         EditorGUILayout.EndVertical();
-        EditorGUILayout.Space();
+        GUILayout.Space(4);
+    }
+
+    private void DrawIconButton(string iconName, string tooltip, System.Action action)
+    {
+        GUIContent icon = EditorGUIUtility.IconContent(iconName);
+        icon.tooltip = tooltip;
+        if (GUILayout.Button(icon, GUILayout.Width(20), GUILayout.Height(16)))
+        {
+            action?.Invoke();
+        }
+    }
+
+    private void DrawSectionHeader(string title)
+    {
+        var style = new GUIStyle(EditorStyles.boldLabel)
+        {
+            fontSize = 12,
+            margin = new RectOffset(0, 0, 5, 5)
+        };
+        EditorGUILayout.LabelField(title, style);
+    }
+
+    private GUIStyle GetSectionStyle()
+    {
+        var style = new GUIStyle(GUI.skin.box);
+        style.margin = new RectOffset(2, 2, 2, 2);
+        style.padding = new RectOffset(8, 8, 8, 8);
+        return style;
+    }
+
+    private GUIStyle GetCardStyle()
+    {
+        var style = new GUIStyle(GUI.skin.box);
+        style.margin = new RectOffset(2, 2, 2, 2);
+        style.padding = new RectOffset(6, 6, 6, 6);
+        return style;
+    }
+
+    private GUIStyle GetMiniLabelStyle()
+    {
+        return new GUIStyle(EditorStyles.miniLabel)
+        {
+            fontSize = 9
+        };
     }
 
     private string GetPoolCategory(PoolConfig config)
     {
         if (config == null) return "Unknown";
-
-        if (!string.IsNullOrEmpty(config.poolCategory))
-        {
-            return config.poolCategory;
-        }
-
-        return defaultCategoryNameProp.stringValue;
+        return !string.IsNullOrEmpty(config.poolCategory) ? config.poolCategory : defaultCategoryNameProp.stringValue;
     }
 
     private void CategorizePools()
@@ -434,12 +396,9 @@ public class PoolSystemManagerEditor : Editor
         foreach (var config in configs)
         {
             if (config == null) continue;
-
             string category = GetPoolCategory(config);
             if (!categorizedPools.ContainsKey(category))
-            {
                 categorizedPools[category] = new List<PoolConfig>();
-            }
             categorizedPools[category].Add(config);
         }
     }
@@ -447,102 +406,50 @@ public class PoolSystemManagerEditor : Editor
     private string GetConfigStatus(PoolConfig config)
     {
         if (config == null) return "Error: Null Config";
-
-        if (string.IsNullOrEmpty(config.poolKey))
-            return "Error: No Key";
-
-        if (!IsValidCSharpIdentifier(config.poolKey))
-            return "Error: Invalid Key";
-
-        if (!IsKeyInPoolKeysFile(config.poolKey))
-            return "Missing Key";
-
-        if (config.prefabs == null || config.prefabs.Length == 0)
-            return "Error: No Prefabs";
-
-        if (config.prefabs.All(p => p == null))
-            return "Error: All Missing";
-
-        if (config.initialPoolSize <= 0)
-            return "Error: Bad Size";
-
-        if (config.maxPoolSize < config.initialPoolSize)
-            return "Warning: Size Mismatch";
-
+        if (string.IsNullOrEmpty(config.poolKey)) return "Error: No Key";
+        if (!IsValidCSharpIdentifier(config.poolKey)) return "Error: Invalid Key";
+        if (!IsKeyInPoolKeysFile(config.poolKey)) return "Missing Key";
+        if (config.prefabs == null || config.prefabs.Length == 0) return "Error: No Prefabs";
+        if (config.prefabs.All(p => p == null)) return "Error: All Missing";
+        if (config.initialPoolSize <= 0) return "Error: Bad Size";
+        if (config.maxPoolSize < config.initialPoolSize) return "Warning: Size Mismatch";
         return "Ready";
     }
 
     private string GetConfigErrorMessage(PoolConfig config)
     {
         if (config == null) return "Configuration is null";
-
         var messages = new List<string>();
-
-        if (string.IsNullOrEmpty(config.poolKey))
-            messages.Add("Pool key is empty");
-        else if (!IsValidCSharpIdentifier(config.poolKey))
-            messages.Add("Pool key must be a valid C# identifier (letters, numbers, underscore)");
-        else if (!IsKeyInPoolKeysFile(config.poolKey))
-            messages.Add("Pool key not found in PoolKeys.cs - use 'Add Key' button");
-
-        if (config.prefabs == null || config.prefabs.Length == 0)
-            messages.Add("No prefabs assigned");
-        else if (config.prefabs.All(p => p == null))
-            messages.Add("All prefab references are missing");
-        else if (config.prefabs.Any(p => p == null))
-            messages.Add("Some prefab references are missing");
-
-        if (config.initialPoolSize <= 0)
-            messages.Add("Initial size must be greater than 0");
-
-        if (config.maxPoolSize < config.initialPoolSize)
-            messages.Add("Max size cannot be less than initial size");
-
+        if (string.IsNullOrEmpty(config.poolKey)) messages.Add("Pool key is empty");
+        else if (!IsValidCSharpIdentifier(config.poolKey)) messages.Add("Pool key must be valid C# identifier");
+        else if (!IsKeyInPoolKeysFile(config.poolKey)) messages.Add("Pool key not found in PoolKeys.cs");
+        if (config.prefabs == null || config.prefabs.Length == 0) messages.Add("No prefabs assigned");
+        else if (config.prefabs.All(p => p == null)) messages.Add("All prefab references missing");
+        else if (config.prefabs.Any(p => p == null)) messages.Add("Some prefab references missing");
+        if (config.initialPoolSize <= 0) messages.Add("Initial size must be > 0");
+        if (config.maxPoolSize < config.initialPoolSize) messages.Add("Max size < initial size");
         return string.Join(" • ", messages);
     }
 
     private GUIStyle GetStatusStyle(string status)
     {
         var style = new GUIStyle(EditorStyles.miniLabel);
-
-        if (status == "Ready")
-        {
-            style.normal.textColor = Color.green;
-        }
-        else if (status.StartsWith("Error:"))
-        {
-            style.normal.textColor = Color.red;
-        }
-        else if (status.StartsWith("Warning:"))
-        {
-            style.normal.textColor = Color.yellow;
-        }
-        else if (status == "Missing Key")
-        {
-            style.normal.textColor = new Color(1f, 0.5f, 0f);
-        }
-        else
-        {
-            style.normal.textColor = Color.gray;
-        }
-
+        if (status == "Ready") style.normal.textColor = Color.green;
+        else if (status.StartsWith("Error:")) style.normal.textColor = Color.red;
+        else if (status.StartsWith("Warning:")) style.normal.textColor = Color.yellow;
+        else if (status == "Missing Key") style.normal.textColor = new Color(1f, 0.5f, 0f);
+        else style.normal.textColor = Color.gray;
         return style;
     }
 
     private IEnumerable<PoolConfig> GetFilteredConfigs()
     {
         var allConfigs = GetAllPoolConfigs();
-
-        if (string.IsNullOrEmpty(searchText))
-        {
-            return allConfigs.OrderBy(c => c.poolKey);
-        }
-
+        if (string.IsNullOrEmpty(searchText)) return allConfigs.OrderBy(c => c.poolKey);
         var searchLower = searchText.ToLower();
-        return allConfigs
-            .Where(c => c != null && (c.poolKey?.ToLower().Contains(searchLower) == true ||
-                       c.poolCategory?.ToLower().Contains(searchLower) == true ||
-                       c.prefabs?.Any(p => p != null && p.name.ToLower().Contains(searchLower)) == true))
+        return allConfigs.Where(c => c != null && (c.poolKey?.ToLower().Contains(searchLower) == true ||
+                           c.poolCategory?.ToLower().Contains(searchLower) == true ||
+                           c.prefabs?.Any(p => p != null && p.name.ToLower().Contains(searchLower)) == true))
             .OrderBy(c => c.poolKey);
     }
 
@@ -551,8 +458,7 @@ public class PoolSystemManagerEditor : Editor
         for (int i = 0; i < poolConfigsProp.arraySize; i++)
         {
             var config = poolConfigsProp.GetArrayElementAtIndex(i).objectReferenceValue as PoolConfig;
-            if (config != null)
-                yield return config;
+            if (config != null) yield return config;
         }
     }
 
